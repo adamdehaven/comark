@@ -61,4 +61,56 @@ describe('headingIds option', () => {
       expect((tree.nodes[0] as any)[1].id).toBe('star-here')
     })
   })
+
+  describe('non-ASCII headings', () => {
+    it('keeps accented Latin letters', async () => {
+      const tree = await parseMarkdown('## Café')
+
+      expect((tree.nodes[0] as any)[1].id).toBe('café')
+    })
+
+    it('keeps accented Latin letters across words', async () => {
+      const tree = await parseMarkdown('## Ünïcödé Tëxt')
+
+      expect((tree.nodes[0] as any)[1].id).toBe('ünïcödé-tëxt')
+    })
+
+    it('keeps Cyrillic letters', async () => {
+      const tree = await parseMarkdown('## Привет мир')
+
+      expect((tree.nodes[0] as any)[1].id).toBe('привет-мир')
+    })
+
+    it('keeps CJK characters', async () => {
+      const tree = await parseMarkdown('## 日本語')
+
+      expect((tree.nodes[0] as any)[1].id).toBe('日本語')
+    })
+
+    it('omits the id for a symbol-only heading', async () => {
+      const tree = await parseMarkdown('## 🚀')
+
+      expect((tree.nodes[0] as any)[1].id).toBeUndefined()
+    })
+
+    it('omits the id for every duplicate symbol-only heading', async () => {
+      const tree = await parseMarkdown('## 🚀\n\n## 🚀')
+
+      const ids = tree.nodes.map((n: any) => n[1].id)
+      expect(ids).toEqual([undefined, undefined])
+    })
+
+    it('keeps the parent prefix for a non-ASCII child heading', async () => {
+      const tree = await parseMarkdown('## Setup\n\n### Café')
+
+      const ids = tree.nodes.map((n: any) => n[1].id)
+      expect(ids).toEqual(['setup', 'setup-café'])
+    })
+
+    it('keeps the underscore prefix for a leading digit', async () => {
+      const tree = await parseMarkdown('## 2024 résumé')
+
+      expect((tree.nodes[0] as any)[1].id).toBe('_2024-résumé')
+    })
+  })
 })

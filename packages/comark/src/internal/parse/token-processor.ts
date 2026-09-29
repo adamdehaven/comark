@@ -415,8 +415,14 @@ function processBlockToken(
       if (state?.headingIds) {
         const text = children.nodes.map((n) => textContent(n)).join('')
         const headingId = uniqueSlug(slugify(text), level, state)
-        // Merge user-supplied attrs with the auto-generated id; user `id` wins.
-        attrs = { id: headingId, ...userAttrs }
+        // An empty id, or a bare dedup suffix like "-1", is not a usable anchor. The
+        // stack push and counter in uniqueSlug still run, so dedup stays intact.
+        if (headingId && !/^-\d/.test(headingId)) {
+          // Merge user-supplied attrs with the auto-generated id; user `id` wins.
+          attrs = { id: headingId, ...userAttrs }
+        } else {
+          attrs = userAttrs
+        }
       } else {
         attrs = userAttrs
       }
@@ -632,7 +638,7 @@ function slugify(text: string): string {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/[^\w-]+/g, '') // Remove non-word chars (except hyphens)
+    .replace(/[^\p{L}\p{M}\p{Nd}\p{Nl}_-]+/gu, '') // Keep Unicode letters, marks and numbers; drop the rest
     .replace(/-{2,}/g, '-') // Replace multiple hyphens with single hyphen
     .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
 
