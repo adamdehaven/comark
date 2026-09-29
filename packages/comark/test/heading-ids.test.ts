@@ -107,6 +107,27 @@ describe('headingIds option', () => {
       expect(ids).toEqual(['setup', 'setup-café'])
     })
 
+    it('does not prefix a child with an empty parent id', async () => {
+      const tree = await parseMarkdown('## 🚀\n\n### Café')
+
+      const ids = tree.nodes.map((n: any) => n[1].id)
+      expect(ids).toEqual([undefined, 'café'])
+    })
+
+    it('omits the id for a symbol-only child of a prefixed parent', async () => {
+      const tree = await parseMarkdown('## Setup\n\n### 🚀')
+
+      const ids = tree.nodes.map((n: any) => n[1].id)
+      expect(ids).toEqual(['setup', undefined])
+    })
+
+    it('omits the id for nested symbol-only headings', async () => {
+      const tree = await parseMarkdown('## 🚀\n\n### 🚀')
+
+      const ids = tree.nodes.map((n: any) => n[1].id)
+      expect(ids).toEqual([undefined, undefined])
+    })
+
     it('keeps the underscore prefix for a leading digit', async () => {
       const tree = await parseMarkdown('## 2024 résumé')
 
