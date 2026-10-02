@@ -634,8 +634,9 @@ function mergeAdjacentTextNodes(nodes: Node[]): Node[] {
  * Example: "1. Introduction" -> "_1-introduction"
  * Example: "Café" -> "café"
  *
- * Keeps Unicode letters, marks, and numbers. A leading combining mark is dropped so the
- * result is a valid HTML5 id (NameStartChar is a letter or `_`, never a mark).
+ * Keeps Unicode letters, marks, decimal digits, and letter numbers. A combining mark is
+ * dropped wherever it would lead, so the result is a valid HTML5 id (NameStartChar is a
+ * letter or `_`, never a mark).
  */
 function slugify(text: string): string {
   let slug = text
@@ -643,13 +644,14 @@ function slugify(text: string): string {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '-') // Replace spaces with hyphens
-    // Keep Unicode letters, marks and numbers; drop everything else.
+    // Keep Unicode letters, marks, decimal digits and letter numbers; drop the rest.
+    // Other numbers (No: ①, ½, ²) are not valid HTML5 id or CSS ident characters.
     .replace(/[^\p{L}\p{M}\p{Nd}\p{Nl}_-]+/gu, '')
     .replace(/-{2,}/g, '-') // Replace multiple hyphens with single hyphen
-    .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
-    // A mark cannot start an HTML5 id, and one may only become leading once the
-    // hyphens in front of it are gone (`-\u0301cafe`).
-    .replace(/^\p{M}+/u, '')
+    // Drop a leading run of marks and hyphens. They only ever expose each other
+    // (`\u0301-1` would otherwise survive as "-1", which the dedup guard discards),
+    // so one alternation covers the whole run.
+    .replace(/^(?:\p{M}+|-+)+/u, '')
 
   // Prefix an ASCII leading digit. `#123` is not a valid CSS ident; a non-ASCII
   // digit (U+0660 ARABIC-INDIC DIGIT ZERO and friends) is, so it is left as-is.

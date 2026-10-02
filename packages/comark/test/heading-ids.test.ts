@@ -162,6 +162,13 @@ describe('headingIds option', () => {
       expect((tree.nodes[0] as any)[1].id).toBe('accent')
     })
 
+    it('still prefixes a digit when a leading mark hides the hyphen in front of it', async () => {
+      // `\u0301-1` strips to `-1` if the mark goes first, which the dedup guard discards.
+      const tree = await parseMarkdown('## \u0301-1')
+
+      expect((tree.nodes[0] as any)[1].id).toBe('_1')
+    })
+
     it('slugifies a heading whose text is "-1" to a real id, not the empty-slug suffix', async () => {
       // Leading hyphens are stripped before the digit prefix, so this is `_1`,
       // not the `-1` artifact that only an empty slug's dedup counter produces.

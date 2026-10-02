@@ -488,10 +488,10 @@ export interface ParserOptions<TPlugins extends readonly ComarkPlugin<any, any>[
    * Whether to auto-generate `id` attributes for `h1`–`h6` headings from their text content.
    * Set `false` to skip auto-generated ids; user-supplied `id` attributes are still preserved.
    *
-   * Generated ids keep Unicode letters, marks, and numbers (`## Café` → `café`,
-   * `## 日本語` → `日本語`). Punctuation and symbols are dropped, and a heading that
-   * slugifies to nothing (emoji, punctuation only) gets no id. A leading digit is
-   * prefixed with `_`.
+   * Generated ids keep Unicode letters, marks, decimal digits, and letter numbers
+   * (`## Café` → `café`, `## 日本語` → `日本語`). Punctuation and symbols are dropped,
+   * and a heading that slugifies to nothing (emoji, punctuation only) gets no id.
+   * A leading ASCII digit is prefixed with `_`.
    *
    * @default true
    * @example
