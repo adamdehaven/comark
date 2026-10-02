@@ -648,10 +648,10 @@ function slugify(text: string): string {
     // Other numbers (No: ①, ½, ²) are not valid HTML5 id or CSS ident characters.
     .replace(/[^\p{L}\p{M}\p{Nd}\p{Nl}_-]+/gu, '')
     .replace(/-{2,}/g, '-') // Replace multiple hyphens with single hyphen
-    // Drop a leading run of marks and hyphens. They only ever expose each other
-    // (`\u0301-1` would otherwise survive as "-1", which the dedup guard discards),
-    // so one alternation covers the whole run.
-    .replace(/^(?:\p{M}+|-+)+/u, '')
+    // Drop a leading run of marks and hyphens, plus trailing hyphens. Marks and
+    // hyphens only ever expose each other (`\u0301-1` would otherwise survive as
+    // "-1", which the dedup guard discards), so one alternation covers the run.
+    .replace(/^(?:\p{M}+|-+)+|-+$/gu, '')
 
   // Prefix an ASCII leading digit. `#123` is not a valid CSS ident; a non-ASCII
   // digit (U+0660 ARABIC-INDIC DIGIT ZERO and friends) is, so it is left as-is.

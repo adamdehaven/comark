@@ -169,6 +169,12 @@ describe('headingIds option', () => {
       expect((tree.nodes[0] as any)[1].id).toBe('_1')
     })
 
+    it('drops a trailing hyphen', async () => {
+      const tree = await parseMarkdown('## Setup -')
+
+      expect((tree.nodes[0] as any)[1].id).toBe('setup')
+    })
+
     it('slugifies a heading whose text is "-1" to a real id, not the empty-slug suffix', async () => {
       // Leading hyphens are stripped before the digit prefix, so this is `_1`,
       // not the `-1` artifact that only an empty slug's dedup counter produces.
