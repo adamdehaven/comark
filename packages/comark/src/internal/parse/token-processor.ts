@@ -415,9 +415,9 @@ function processBlockToken(
       if (state?.headingIds) {
         const text = children.nodes.map((n) => textContent(n)).join('')
         const headingId = uniqueSlug(slugify(text), level, state)
-        // An empty id, or a bare dedup suffix like "-1", is not a usable anchor. The
-        // stack push and counter in uniqueSlug still run, so dedup stays intact.
-        if (headingId && !/^-\d/.test(headingId)) {
+        // An empty slug is recorded but never a usable anchor, and each further duplicate
+        // of it comes back as "-1", "-2", … — none of which is either.
+        if (headingId && !/^-\d+$/.test(headingId)) {
           // Merge user-supplied attrs with the auto-generated id; user `id` wins.
           attrs = { id: headingId, ...userAttrs }
         } else {
@@ -629,20 +629,31 @@ function mergeAdjacentTextNodes(nodes: Node[]): Node[] {
 }
 
 /**
- * Convert text to a slug for heading IDs
+ * Convert text to a slug for heading IDs.
  * Example: "Hello World" -> "hello-world"
  * Example: "1. Introduction" -> "_1-introduction"
+ * Example: "Café" -> "café"
+ *
+ * Keeps Unicode letters, marks, and numbers. A leading combining mark is dropped so the
+ * result is a valid HTML5 id (NameStartChar is a letter or `_`, never a mark).
  */
 function slugify(text: string): string {
   let slug = text
+    .normalize('NFC')
     .toLowerCase()
     .trim()
     .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/[^\p{L}\p{M}\p{Nd}\p{Nl}_-]+/gu, '') // Keep Unicode letters, marks and numbers; drop the rest
+    // Keep Unicode letters, marks and numbers; drop everything else.
+    .replace(/[^\p{L}\p{M}\p{Nd}\p{Nl}_-]+/gu, '')
     .replace(/-{2,}/g, '-') // Replace multiple hyphens with single hyphen
     .replace(/^-+|-+$/g, '') // Remove leading/trailing hyphens
+    // A mark cannot start an HTML5 id, and one may only become leading once the
+    // hyphens in front of it are gone (`-\u0301cafe`).
+    .replace(/^\p{M}+/u, '')
 
-  // Prefix with underscore if starts with a digit (HTML IDs can't start with numbers)
+  // Prefix an ASCII leading digit. `#123` is not a valid CSS ident; a non-ASCII
+  // digit (U+0660 ARABIC-INDIC DIGIT ZERO and friends) is, so it is left as-is.
+  // `\d` stays without the `u` flag on purpose — with `u` it would match every Nd.
   if (/^\d/.test(slug)) {
     slug = '_' + slug
   }
