@@ -64,7 +64,7 @@ describe('denial-of-service hardening', () => {
     for (const { label, options } of modes) {
       it(`resolves hundreds of placeholders in one template quickly in ${label}`, () => {
         const start = performance.now()
-        const result = resolveAttributes({ ':title': '{{ data.x }}'.repeat(340) }, renderData, options)
+        const result = resolveAttributes({ $: { bind: 1 }, ':title': '{{ data.x }}'.repeat(340) }, renderData, options)
         expect(result).toEqual({ title: 'v'.repeat(340) })
         expect(performance.now() - start).toBeLessThan(500)
       })
@@ -72,7 +72,7 @@ describe('denial-of-service hardening', () => {
       it(`resolves a long default value quickly in ${label}`, () => {
         const start = performance.now()
         const result = resolveAttributes(
-          { ':title': '{{ data.missing || ' + 'a'.repeat(3900) + ' }}' },
+          { $: { bind: 1 }, ':title': '{{ data.missing || ' + 'a'.repeat(3900) + ' }}' },
           renderData,
           options
         )
@@ -84,14 +84,16 @@ describe('denial-of-service hardening', () => {
     it('keeps a flood of unclosed `{{` as written without rescanning', () => {
       const value = '{{ '.repeat(1_300)
       const start = performance.now()
-      const result = resolveAttributes({ ':title': value }, renderData)
+      const result = resolveAttributes({ $: { bind: 1 }, ':title': value }, renderData)
       expect(result).toEqual({ ':title': value })
       expect(performance.now() - start).toBeLessThan(200)
     })
 
     it('drops a flood of unclosed `{{` in parseJson mode without rescanning', () => {
       const start = performance.now()
-      const result = resolveAttributes({ ':title': '{{ '.repeat(1_300) }, renderData, { parseJson: true })
+      const result = resolveAttributes({ $: { bind: 1 }, ':title': '{{ '.repeat(1_300) }, renderData, {
+        parseJson: true,
+      })
       expect(result).toHaveProperty('title', undefined)
       expect(Object.keys(result)).toEqual(['title'])
       expect(performance.now() - start).toBeLessThan(200)
@@ -100,14 +102,16 @@ describe('denial-of-service hardening', () => {
     it('keeps a closed placeholder followed by unclosed `{{` as written', () => {
       const value = '{{ data.x }}{{ '.repeat(250)
       const start = performance.now()
-      const result = resolveAttributes({ ':title': value }, renderData)
+      const result = resolveAttributes({ $: { bind: 1 }, ':title': value }, renderData)
       expect(result).toEqual({ ':title': value })
       expect(performance.now() - start).toBeLessThan(200)
     })
 
     it('drops a closed placeholder followed by unclosed `{{` in parseJson mode', () => {
       const start = performance.now()
-      const result = resolveAttributes({ ':title': '{{ data.x }}{{ '.repeat(250) }, renderData, { parseJson: true })
+      const result = resolveAttributes({ $: { bind: 1 }, ':title': '{{ data.x }}{{ '.repeat(250) }, renderData, {
+        parseJson: true,
+      })
       expect(result).toHaveProperty('title', undefined)
       expect(Object.keys(result)).toEqual(['title'])
       expect(performance.now() - start).toBeLessThan(200)
@@ -115,7 +119,7 @@ describe('denial-of-service hardening', () => {
 
     it('leaves a template over the length limit as written', () => {
       const value = '{{ data.x }}'.repeat(500)
-      const result = resolveAttributes({ ':title': value }, renderData)
+      const result = resolveAttributes({ $: { bind: 1 }, ':title': value }, renderData)
       expect(result).toEqual({ ':title': value })
     })
   })

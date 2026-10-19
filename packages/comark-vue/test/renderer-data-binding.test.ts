@@ -3,6 +3,7 @@ import { createSSRApp, defineComponent, h } from 'vue'
 import { renderToString } from '@vue/server-renderer'
 import { parseMarkdown } from 'comark'
 import { MarkdownDocument } from '../src/components/MarkdownDocument'
+import binding from '../src/plugins/binding'
 
 const Badge = defineComponent({
   name: 'Badge',
@@ -39,8 +40,8 @@ const VariantCard = defineComponent({
   },
 })
 
-async function renderMarkdown(markdown: string, props: Record<string, any> = {}) {
-  const tree = await parseMarkdown(markdown)
+async function renderMarkdown(markdown: string, { plugins, ...props }: Record<string, any> = {}) {
+  const tree = await parseMarkdown(markdown, { plugins })
   const app = createSSRApp({
     setup: () => () => h(MarkdownDocument, { value: tree, ...props }),
   })
@@ -125,7 +126,7 @@ site:
 ::
 
 :a[Docs]{:href="/d/{{ data.id }}"}`,
-      { components: { badge: Badge }, data: { name: 'Ada', id: 7 } }
+      { components: { badge: Badge }, data: { name: 'Ada', id: 7 }, plugins: [binding()] }
     )
     expect(html).toContain('Hi Ada')
     expect(html).toContain('href="/d/7"')
@@ -133,17 +134,18 @@ site:
 
   it('omits a rejected URL while keeping the link text', async () => {
     const md = ':a[x]{:href="{{ data.url }}"}'
-    const bad = await renderMarkdown(md, { data: { url: 'javascript:alert(1)' } })
+    const bad = await renderMarkdown(md, { data: { url: 'javascript:alert(1)' }, plugins: [binding()] })
     expect(bad).not.toContain('javascript:')
     expect(bad).not.toContain('href')
     expect(bad).toContain('<a>x</a>')
-    const ok = await renderMarkdown(md, { data: { url: '/ok' } })
+    const ok = await renderMarkdown(md, { data: { url: '/ok' }, plugins: [binding()] })
     expect(ok).toContain('href="/ok"')
   })
 
   it('omits a prop whose sole placeholder is unresolved so the default applies', async () => {
     const html = await renderMarkdown(`::card{:variant="{{ data.missing }}"}\n::`, {
       components: { card: VariantCard },
+      plugins: [binding()],
     })
     expect(html).toContain('class="card primary"')
   })

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Suspense, createRenderer, h, nextTick, reactive } from 'vue'
 import { parseMarkdown } from 'comark'
 import { MarkdownDocument } from '../src/components/MarkdownDocument'
+import binding from '../src/plugins/binding'
 
 interface N {
   props: Record<string, unknown>
@@ -45,7 +46,7 @@ const settle = async () => {
 }
 
 async function mount(markdown: string, data: Record<string, unknown>): Promise<N> {
-  const value = await parseMarkdown(markdown)
+  const value = await parseMarkdown(markdown, { plugins: [binding()] })
   const root = node()
   createApp({ render: () => h(Suspense, null, { default: () => h(MarkdownDocument, { value, data }) }) }).mount(root)
   await settle()

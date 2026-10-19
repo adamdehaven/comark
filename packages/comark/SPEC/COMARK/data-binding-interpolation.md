@@ -1,3 +1,9 @@
+---
+options:
+  plugins:
+    - binding
+---
+
 ## Input
 
 ```md
@@ -32,14 +38,20 @@ slug: getting-started
       {
         ":title": "Item {{ frontmatter.id }}",
         ":link": "/docs/{{ frontmatter.slug }}/{{ frontmatter.missing || overview }}",
-        ":note": "{{ frontmatter.missing }}"
+        ":note": "{{ frontmatter.missing }}",
+        "$": {
+          "bind": 1
+        }
       }
     ],
     [
       "card",
       {
         ":title": "Item {{ frontmatter.id }}",
-        ":to": "javascript:{{ frontmatter.slug }}"
+        ":to": "javascript:{{ frontmatter.slug }}",
+        "$": {
+          "bind": 1
+        }
       }
     ]
   ]

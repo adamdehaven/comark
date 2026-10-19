@@ -176,15 +176,8 @@ function renderNode(
 
     // Only shadow the parent's `props` scope when the current element has its
     // own attributes. Bare wrappers (`<p>`, `<ul>`, `<li>`, …) must keep the
-    // parent's scope so bindings like `{{ props.x }}` reach across them. The
-    // check uses the raw attributes: resolving can omit all of them.
-    let hasOwnAttrs = false
-    for (const key in nodeProps) {
-      if (key !== '$') {
-        hasOwnAttrs = true
-        break
-      }
-    }
+    // parent's scope so bindings like `{{ props.x }}` reach across them.
+    const hasOwnAttrs = Object.keys(resolved).length > 0
     const childrenRenderData: NodeRenderData = hasOwnAttrs ? { ...renderData, props: scopeProps } : renderData
     // Separate template elements (slots) from regular children
     const slots: Record<string, React.ReactNode[]> = {}

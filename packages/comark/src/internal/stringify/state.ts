@@ -58,22 +58,12 @@ export async function one(node: Node, state: State, parent?: ElementNode, atLine
   // element's values, regardless of which handler (html / ansi / user) runs.
   // Elements with no attributes (e.g. an auto-generated `<p>` wrapper) must
   // NOT shadow the parent's scope, otherwise `{{ props.* }}` inside them would
-  // resolve to nothing. The check uses the raw attributes, because resolving
-  // can drop all of them and the parent's props must not leak back in.
+  // resolve to nothing.
   const prevRenderData = state.renderData
   if (state.renderData && node[1]) {
-    let hasOwnAttrs = false
-    for (const key in node[1]) {
-      if (key !== '$') {
-        hasOwnAttrs = true
-        break
-      }
-    }
-    if (hasOwnAttrs) {
-      state.renderData = {
-        ...prevRenderData,
-        props: resolveAttributes(node[1] as Record<string, unknown>, prevRenderData),
-      }
+    const resolved = resolveAttributes(node[1] as Record<string, unknown>, prevRenderData)
+    if (Object.keys(resolved).length > 0) {
+      state.renderData = { ...prevRenderData, props: resolved }
     }
   }
 

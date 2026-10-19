@@ -1,6 +1,7 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
 import { parseMarkdown } from 'comark'
 import shiki from 'comark/plugins/shiki'
+import binding from 'comark/plugins/binding'
 import githubDark from 'shiki/dist/themes/github-dark.mjs'
 import {
   createAnsiPrinter,
@@ -405,14 +406,14 @@ home: https://example.com
     })
 
     it('interpolates placeholders in :href and :alt', async () => {
-      const link = await parseMarkdown('[Doc](x){:href="/d/{{ data.id }}"}')
+      const link = await parseMarkdown('[Doc](x){:href="/d/{{ data.id }}"}', { plugins: [binding()] })
       expect(await renderAnsiFromDocument(link, { colors: false, data: { id: 7 } })).toContain('Doc (/d/7)')
-      const img = await parseMarkdown('![x](/x.png){:alt="Alt {{ data.id }}"}')
+      const img = await parseMarkdown('![x](/x.png){:alt="Alt {{ data.id }}"}', { plugins: [binding()] })
       expect(await renderAnsiFromDocument(img, { colors: false, data: { id: 7 } })).toContain('[image: Alt 7]')
     })
 
     it('prints the literal fallback when an interpolated URL is unsafe', async () => {
-      const link = await parseMarkdown('[Doc](x){:href="{{ data.bad }}"}')
+      const link = await parseMarkdown('[Doc](x){:href="{{ data.bad }}"}', { plugins: [binding()] })
       const out = await renderAnsiFromDocument(link, { colors: false, data: { bad: 'javascript:alert(1)' } })
       expect(out).toBe('Doc (x)\n')
       expect(out).not.toContain('javascript:')

@@ -139,9 +139,23 @@ The same check applies to `:href` and `:src` bindings twice: on the JSON-decoded
 
 ### Interpolated props
 
-A `:` prop can contain `{{ path }}` placeholders (see [String interpolation](/syntax/components#string-interpolation)). Comark checks the final string after it inserts the values, even without the `security()` plugin. Unsafe prop names and unsafe URL schemes are omitted. Path bindings are not checked this way: they only get the render-time URL check for `href`, `src`, `xlink:href` and `to`.
+With the `binding()` plugin, a `:` prop can contain `{{ path }}` placeholders (see [String interpolation](/syntax/components#string-interpolation)). Comark checks the final string after it inserts the values, even without the `security()` plugin. Unsafe prop names and unsafe URL schemes are omitted, including a scheme split between fixed text and data, such as `:to="javascri{{ frontmatter.rest }}"`.
 
-`allowedLinkPrefixes`, `allowedProtocols` and `defaultOrigin` check literal values at parse time. They do not apply to the final interpolated URL, so avoid building URLs from untrusted data.
+In a URL prop, data can only fill what comes after the fixed text, so the fixed text before the first placeholder must set the scheme and host:
+
+| Template | Result |
+| --- | --- |
+| `/docs/{{ data.slug }}`, `?q={{ data.q }}`, `https://myapp.com/{{ data.slug }}` | Kept |
+| `{{ data.url }}` | Kept: the data sets the whole URL, and the result still gets the scheme check |
+| `/{{ data.path }}` | Omitted: data such as `/evil.com` would make `//evil.com` |
+| `https://myapp.com{{ data.host }}` | Omitted with `security()`: data such as `.evil.com` would change the host |
+| `java{{ data.rest }}` | Omitted with `security()`: data could finish the scheme |
+
+With `security()`, `allowedLinkPrefixes`, `allowedImagePrefixes`, and `allowedProtocols` are checked against that fixed text at parse time. A template that needs a `defaultOrigin` rewrite is omitted. A template that starts with a placeholder is treated like a path binding.
+
+Values are inserted without URL encoding: `?q={{ data.q }}` passes `&` and `#` through. Only interpolate trusted values, or values you encoded yourself.
+
+Path bindings (`:href="data.url"`) are not checked against the allowlists at render time. They only get the render-time URL check for `href`, `src`, `xlink:href`, and `to`.
 
 ---
 

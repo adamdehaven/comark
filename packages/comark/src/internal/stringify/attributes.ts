@@ -3,7 +3,7 @@ import { escapeHtml, get } from '../../utils/index.ts'
 import { isUnsafeUrlValue } from '../props-validation.ts'
 import { pickFence } from './fence.ts'
 import { interpolateProp } from './interpolate.ts'
-import type { NodeRenderData } from '../../types.ts'
+import type { ElementNodeAttributes, NodeRenderData } from '../../types.ts'
 
 export interface ResolveAttributesOptions {
   /**
@@ -41,8 +41,9 @@ const HTML_SINK_PROPS = new Set(['innerhtml', 'dangerouslysetinnerhtml', 'textco
  * the `:` prefix is always stripped, falling back to the dot-path lookup.
  * The `$` metadata key is never forwarded.
  *
- * A `:prefixed` string with `{{ path || default }}` placeholders is interpolated
- * in both modes. The prop is omitted when nothing is available or the result is unsafe.
+ * On a node marked by the `binding()` plugin (`$.bind`), a `:prefixed` string
+ * with `{{ path || default }}` placeholders is interpolated in both modes.
+ * The prop is omitted when nothing is available or the result is unsafe.
  */
 export function resolveAttributes(
   attrs: Record<string, unknown>,
@@ -50,6 +51,7 @@ export function resolveAttributes(
   options: ResolveAttributesOptions = {}
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {}
+  const bind = (attrs.$ as ElementNodeAttributes['$'])?.bind === 1
   for (const key in attrs) {
     if (key === '$') continue
 
@@ -61,19 +63,16 @@ export function resolveAttributes(
 
     if (HTML_SINK_PROPS.has(lowerOutKey)) continue
 
-    if (isBinding && typeof value === 'string') {
-      const text = interpolateProp(outKey, value, renderData)
-      if (text !== undefined) {
-        // UNRESOLVED and REJECTED_PROP are symbols: the prop is omitted
-        if (typeof text === 'string') result[outKey] = text
-        continue
-      }
-    }
-
     let outValue: unknown
     let resultKey = key
+    const text = bind && isBinding && typeof value === 'string' ? interpolateProp(outKey, value, renderData) : undefined
 
-    if (options.parseJson && isBinding) {
+    if (text !== undefined) {
+      // UNRESOLVED and REJECTED_PROP are symbols: the prop is omitted
+      if (typeof text !== 'string') continue
+      outValue = text
+      resultKey = outKey
+    } else if (options.parseJson && isBinding) {
       // Framework mode: always strip `:` and hand components real JS values.
       if (typeof value === 'string') {
         try {
@@ -121,16 +120,18 @@ export function resolveAttributes(
 /**
  * Read a named attribute, preferring its `:prefixed` binding (resolved against
  * `renderData`) over the literal `key`. Falls back to the raw value when the
- * binding doesn't resolve.
+ * binding doesn't resolve. An interpolated template that must be omitted
+ * falls back to the literal `key`, as `resolveAttributes` keeps it.
  */
 export function resolveAttribute(attrs: Record<string, unknown>, renderData: NodeRenderData, key: string): unknown {
   const bindKey = `:${key}`
   if (bindKey in attrs) {
     const value = attrs[bindKey]
     if (typeof value === 'string') {
-      const text = interpolateProp(key, value, renderData)
-      if (typeof text === 'string') return text
-      if (text !== undefined) return attrs[key]
+      if ((attrs.$ as ElementNodeAttributes['$'])?.bind === 1) {
+        const text = interpolateProp(key, value, renderData)
+        if (text !== undefined) return typeof text === 'string' ? text : attrs[key]
+      }
       const resolved = get(renderData, value)
       if (resolved !== undefined) return resolved
     }
@@ -209,6 +210,8 @@ export function userBlockAttrs(tag: string, attributes: Record<string, unknown>)
  */
 export function comarkAttributes(attributes: Record<string, unknown>) {
   const attrs = Object.entries(attributes)
+    // `$` is parser metadata (line, html, bind), never an authored attribute
+    .filter(([key]) => key !== '$')
     .map(([key, value]) => {
       if (key.startsWith(':') && value === 'true') {
         return key.slice(1)
