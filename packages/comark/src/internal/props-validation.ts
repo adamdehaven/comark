@@ -296,13 +296,27 @@ export function validateProp(attribute: string, value: unknown, options: PropsVa
 const URL_SCHEME = /^[a-z][a-z\d+.-]*:/i
 const DOUBLE_SLASH = /^[/\\]{2}/
 const PATH_START = /[/\\?#]/
+/** Schemes whose URLs always have a host. Browsers skip any run of `/` or `\` after them. */
+const SPECIAL_SCHEMES = new Set(['http:', 'https:', 'ws:', 'wss:', 'ftp:', 'file:'])
+// oxlint-disable-next-line no-control-regex
+const LEADING_SLASHES = /^[\u0000-\u0020]*[/\\]*/
+
+/**
+ * Whether the text after a scheme, or a scheme-relative `//`, already holds a
+ * complete host: the browser skips the leading slashes, then reads the host
+ * up to the next `/`, `\`, `?` or `#`. `//cdn.example.com/` does, while `/`,
+ * `///` and `//cdn.example.com` leave the host open to the data that follows.
+ */
+export function fixesHost(rest: string): boolean {
+  return rest.replace(LEADING_SLASHES, '').search(PATH_START) > 0
+}
 
 /**
  * Validate a URL template by its literal prefix, the text before the first placeholder.
  * Data can only fill what follows, so the prefix must fix the scheme and host on its own:
- * `/docs/{{ x }}` and `https://myapp.com/{{ x }}` pass, while `java{{ x }}`, `/{{ x }}` and
- * `https://myapp.com{{ x }}` are rejected. A template that starts with a placeholder is
- * as trusted as a plain `:href="data.url"` binding.
+ * `/docs/{{ x }}` and `https://myapp.com/{{ x }}` pass, while `java{{ x }}`, `/{{ x }}`,
+ * `https:/{{ x }}` and `https://myapp.com{{ x }}` are rejected. A template that starts
+ * with a placeholder is as trusted as a plain `:href="data.url"` binding.
  */
 function validateUrlTemplate(name: string, prefix: string, options: PropsValidationOptions): unknown {
   const literal = prefix.trimStart()
@@ -310,9 +324,9 @@ function validateUrlTemplate(name: string, prefix: string, options: PropsValidat
 
   const scheme = URL_SCHEME.exec(literal)
   const rest = scheme ? literal.slice(scheme[0].length) : literal
-  if (DOUBLE_SLASH.test(rest)) {
-    // `https://host…` or `//host…`: the host must end before the data
-    if (!PATH_START.test(rest.slice(2))) return REJECTED_PROP
+  if ((scheme && SPECIAL_SCHEMES.has(scheme[0].toLowerCase())) || DOUBLE_SLASH.test(rest)) {
+    // `https:…` or `//…`: the host must be complete before the data
+    if (!fixesHost(rest)) return REJECTED_PROP
   } else if (!scheme) {
     // A relative prefix must already be a path, query or fragment, and `/` alone would let data add a host
     if (!PATH_START.test(literal) || literal === '/' || literal === '\\') return REJECTED_PROP

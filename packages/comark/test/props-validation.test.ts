@@ -567,8 +567,20 @@ describe('validateProp — `{{ }}` URL templates', () => {
     ['//myapp.com{{ data.host }}', 'a scheme-relative host the data can extend'],
     ['https://evil.com/{{ data.slug }}', 'a host outside the allowlist'],
     ['javascript:{{ data.code }}', 'an unsafe scheme'],
+    ['https:/{{ data.path }}', 'a single slash browsers read as //host'],
+    ['https:{{ data.path }}', 'a scheme without a host'],
+    ['https:///{{ data.host }}', 'extra slashes before an empty host'],
+    ['HTTPS:\\\\{{ data.host }}', 'backslashes browsers read as //'],
+    ['///{{ data.host }}', 'a scheme-relative URL with an empty host'],
   ])('rejects %s (%s)', (value) => {
     expect(validateProp(':href', value, allowlist)).toBe(REJECTED_PROP)
+  })
+
+  it('keeps a scheme-relative prefix with a complete, allowed host', () => {
+    expect(validateProp(':src', '//cdn.example.com/{{ data.file }}')).toBe('//cdn.example.com/{{ data.file }}')
+    expect(validateProp(':href', 'https:/myapp.com/{{ data.slug }}', allowlist)).toBe(
+      'https:/myapp.com/{{ data.slug }}'
+    )
   })
 
   it('applies to every URL prop, but not to text props', () => {

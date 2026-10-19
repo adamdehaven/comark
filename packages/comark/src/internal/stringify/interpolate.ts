@@ -1,5 +1,5 @@
 import { get } from '../../utils/index.ts'
-import { REJECTED_PROP, isUrlProp, normalizePropName, validateProp } from '../props-validation.ts'
+import { REJECTED_PROP, fixesHost, isUrlProp, normalizePropName, validateProp } from '../props-validation.ts'
 import { MAX_TEMPLATE_LENGTH, parseTemplate } from '../template.ts'
 import type { NodeRenderData } from '../../types.ts'
 
@@ -69,15 +69,10 @@ export function interpolateProp(
     if (output.length > MAX_TEMPLATE_LENGTH) return UNRESOLVED
   }
 
-  // Literal text must not join with data into a link to another host: `/{{ x }}` with `x = "/evil.com"`.
-  // A value that starts with data is as trusted as a plain `:href="data.url"` binding.
+  // Literal text must not join with data into a link to another host: `/{{ x }}` or `///{{ x }}`
+  // with `x = "evil.com"`. A value that starts with data is as trusted as a plain `:href="data.url"` binding.
   const prefix = parts[0] as string
-  if (
-    prefix !== '' &&
-    !SCHEME_RELATIVE.test(prefix) &&
-    SCHEME_RELATIVE.test(output) &&
-    isUrlProp(normalizePropName(name))
-  ) {
+  if (prefix !== '' && SCHEME_RELATIVE.test(output) && !fixesHost(prefix) && isUrlProp(normalizePropName(name))) {
     return REJECTED_PROP
   }
 

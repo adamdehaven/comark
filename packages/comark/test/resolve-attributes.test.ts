@@ -372,6 +372,13 @@ describe('resolveAttributes (interpolation)', () => {
 
     it('omits a URL where literal text and data join into another host', () => {
       expect(resolveAttributes(bound({ ':href': '/{{ data.host }}' }), renderData, options)).toEqual({})
+      expect(resolveAttributes(bound({ ':href': '///{{ frontmatter.slug }}' }), renderData, options)).toEqual({})
+      expect(resolveAttributes(bound({ ':href': ' /{{ data.host }}' }), renderData, options)).toEqual({})
+      expect(
+        resolveAttributes(bound({ ':src': '//cdn.example.com/{{ frontmatter.slug }}' }), renderData, options)
+      ).toEqual({
+        src: '//cdn.example.com/getting-started',
+      })
       expect(resolveAttributes(bound({ ':href': '/docs/{{ data.host }}' }), renderData, options)).toEqual({
         href: '/docs//evil.com',
       })
